@@ -3,11 +3,16 @@ import styled from "styled-components";
 
 export default function App() {
   const [text, setText] = useState("");
+  const [search, setSearch] = useState("");
 
   const [tasks, setTasks] = useState(() => {
     const saved = localStorage.getItem("tasks");
     return saved ? JSON.parse(saved) : [];
   });
+
+  const filteredTasks = tasks.filter((task) =>
+    task.title.toLowerCase().includes(search.toLowerCase())
+  );
 
   useEffect(() => {
     localStorage.setItem("tasks", JSON.stringify(tasks));
@@ -49,8 +54,15 @@ export default function App() {
           <AddBtn type="submit">Add</AddBtn>
         </Form>
 
+        <SearchInput
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search tasks..."
+        />
+
         <List>
-          {tasks.map((t) => (
+          {filteredTasks.map((t) => (
             <Row key={t.id}>
               <Left>
                 <Check
@@ -67,7 +79,7 @@ export default function App() {
             </Row>
           ))}
 
-          {tasks.length === 0 && <Empty>No tasks yet.</Empty>}
+          {filteredTasks.length === 0 && <Empty>No matching tasks found.</Empty>}
         </List>
 
         <Footer>
@@ -117,7 +129,16 @@ const Input = styled.input`
   flex: 1;
   padding: 12px;
   border-radius: 12px;
-  border: 1px solid rgba(0,0,0,0.15);
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  outline: none;
+`;
+
+const SearchInput = styled.input`
+  width: 100%;
+  padding: 12px;
+  margin-top: 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.15);
   outline: none;
 `;
 
@@ -142,7 +163,7 @@ const Row = styled.div`
   justify-content: space-between;
   align-items: center;
   background: #f7f7fb;
-  border: 1px solid rgba(0,0,0,0.06);
+  border: 1px solid rgba(0, 0, 0, 0.06);
   border-radius: 12px;
   padding: 12px;
 `;
@@ -187,5 +208,5 @@ const ClearBtn = styled.button`
   cursor: pointer;
   font-weight: 700;
   background: transparent;
-  border: 1px solid rgba(0,0,0,0.15);
+  border: 1px solid rgba(0, 0, 0, 0.15);
 `;
