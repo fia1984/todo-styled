@@ -1,38 +1,72 @@
 import { useEffect, useState } from "react";
 import styled from "styled-components";
+import "./App.css";
 
 export default function App() {
   const [text, setText] = useState("");
   const [search, setSearch] = useState("");
+  const [editId, setEditId] = useState(null);
 
   const [tasks, setTasks] = useState(() => {
     const saved = localStorage.getItem("tasks");
-    return saved ? JSON.parse(saved) : [];
+    return saved
+      ? JSON.parse(saved)
+      : [
+          { id: 1, title: "Buy milk", done: false },
+          { id: 2, title: "Study React", done: false },
+        ];
   });
-
-  const filteredTasks = tasks.filter((task) =>
-    task.title.toLowerCase().includes(search.toLowerCase())
-  );
 
   useEffect(() => {
     localStorage.setItem("tasks", JSON.stringify(tasks));
   }, [tasks]);
 
-  function addTask(e) {
+  const filteredTasks = tasks.filter((task) =>
+    task.title.toLowerCase().includes(search.toLowerCase())
+  );
+
+  function handleSubmit(e) {
     e.preventDefault();
     const clean = text.trim();
     if (!clean) return;
 
-    setTasks([{ id: Date.now(), title: clean, done: false }, ...tasks]);
+    if (editId !== null) {
+      const updatedTasks = tasks.map((item) =>
+        item.id === editId ? { ...item, title: clean } : item
+      );
+      setTasks(updatedTasks);
+      setEditId(null);
+    } else {
+      const newTask = {
+        id: Date.now(),
+        title: clean,
+        done: false,
+      };
+      setTasks([newTask, ...tasks]);
+    }
+
     setText("");
+  }
+
+  function handleEdit(id) {
+    const selectedTask = tasks.find((item) => item.id === id);
+    if (!selectedTask) return;
+
+    setText(selectedTask.title);
+    setEditId(id);
   }
 
   function toggleTask(id) {
     setTasks(tasks.map((t) => (t.id === id ? { ...t, done: !t.done } : t)));
   }
 
-  function deleteTask(id) {
-    setTasks(tasks.filter((t) => t.id !== id));
+  function handleDelete(id) {
+    setTasks(tasks.filter((item) => item.id !== id));
+
+    if (editId === id) {
+      setEditId(null);
+      setText("");
+    }
   }
 
   function clearCompleted() {
@@ -43,15 +77,17 @@ export default function App() {
     <Page>
       <Card>
         <Title>To-Do App</Title>
-        <Small>Styled Components + LocalStorage</Small>
+        <Small>Search + Edit + LocalStorage</Small>
 
-        <Form onSubmit={addTask}>
+        <Form onSubmit={handleSubmit}>
           <Input
             value={text}
             onChange={(e) => setText(e.target.value)}
             placeholder="Type a task..."
           />
-          <AddBtn type="submit">Add</AddBtn>
+          <AddBtn type="submit">
+            {editId !== null ? "Update Task" : "Add Task"}
+          </AddBtn>
         </Form>
 
         <SearchInput
@@ -73,9 +109,14 @@ export default function App() {
                 <Task done={t.done}>{t.title}</Task>
               </Left>
 
-              <DelBtn type="button" onClick={() => deleteTask(t.id)}>
-                Delete
-              </DelBtn>
+              <ButtonGroup>
+                <EditBtn type="button" onClick={() => handleEdit(t.id)}>
+                  Edit
+                </EditBtn>
+                <DelBtn type="button" onClick={() => handleDelete(t.id)}>
+                  Delete
+                </DelBtn>
+              </ButtonGroup>
             </Row>
           ))}
 
@@ -92,7 +133,6 @@ export default function App() {
   );
 }
 
-/* Styled Components */
 const Page = styled.div`
   min-height: 100vh;
   display: grid;
@@ -180,6 +220,21 @@ const Task = styled.span`
   font-weight: 700;
   text-decoration: ${(p) => (p.done ? "line-through" : "none")};
   opacity: ${(p) => (p.done ? 0.6 : 1)};
+`;
+
+const ButtonGroup = styled.div`
+  display: flex;
+  gap: 8px;
+`;
+
+const EditBtn = styled.button`
+  padding: 10px 12px;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 700;
+  background: #f4b400;
+  color: white;
 `;
 
 const DelBtn = styled.button`
