@@ -1,76 +1,267 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import styled from "styled-components";
 import "./App.css";
 
 export default function App() {
-  const [task, setTask] = useState("");
-  const [tasks, setTasks] = useState([
-    { id: 1, text: "Buy milk" },
-    { id: 2, text: "Study React" },
-  ]);
+  const [text, setText] = useState("");
+  const [search, setSearch] = useState("");
   const [editId, setEditId] = useState(null);
 
-  const handleSubmit = () => {
-    if (task.trim() === "") return;
+  const [tasks, setTasks] = useState(() => {
+    const saved = localStorage.getItem("tasks");
+    return saved
+      ? JSON.parse(saved)
+      : [
+          { id: 1, title: "Buy milk", done: false },
+          { id: 2, title: "Study React", done: false },
+        ];
+  });
+
+  useEffect(() => {
+    localStorage.setItem("tasks", JSON.stringify(tasks));
+  }, [tasks]);
+
+  const filteredTasks = tasks.filter((task) =>
+    task.title.toLowerCase().includes(search.toLowerCase())
+  );
+
+  function handleSubmit(e) {
+    e.preventDefault();
+    const clean = text.trim();
+    if (!clean) return;
 
     if (editId !== null) {
       const updatedTasks = tasks.map((item) =>
-        item.id === editId ? { ...item, text: task } : item
+        item.id === editId ? { ...item, title: clean } : item
       );
       setTasks(updatedTasks);
       setEditId(null);
     } else {
       const newTask = {
         id: Date.now(),
-        text: task,
+        title: clean,
+        done: false,
       };
-      setTasks([...tasks, newTask]);
+      setTasks([newTask, ...tasks]);
     }
 
-    setTask("");
-  };
+    setText("");
+  }
 
-  const handleEdit = (id) => {
+  function handleEdit(id) {
     const selectedTask = tasks.find((item) => item.id === id);
-    setTask(selectedTask.text);
-    setEditId(id);
-  };
+    if (!selectedTask) return;
 
-  const handleDelete = (id) => {
+    setText(selectedTask.title);
+    setEditId(id);
+  }
+
+  function toggleTask(id) {
+    setTasks(tasks.map((t) => (t.id === id ? { ...t, done: !t.done } : t)));
+  }
+
+  function handleDelete(id) {
     setTasks(tasks.filter((item) => item.id !== id));
 
     if (editId === id) {
       setEditId(null);
-      setTask("");
+      setText("");
     }
-  };
+  }
+
+  function clearCompleted() {
+    setTasks(tasks.filter((t) => !t.done));
+  }
 
   return (
-    <div className="app">
-      <h1>Todo List</h1>
+    <Page>
+      <Card>
+        <Title>To-Do App</Title>
+        <Small>Search + Edit + LocalStorage</Small>
 
-      <div className="input-box">
-        <input
+        <Form onSubmit={handleSubmit}>
+          <Input
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            placeholder="Type a task..."
+          />
+          <AddBtn type="submit">
+            {editId !== null ? "Update Task" : "Add Task"}
+          </AddBtn>
+        </Form>
+
+        <SearchInput
           type="text"
-          placeholder="Enter task"
-          value={task}
-          onChange={(e) => setTask(e.target.value)}
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search tasks..."
         />
-        <button onClick={handleSubmit}>
-          {editId !== null ? "Update Task" : "Add Task"}
-        </button>
-      </div>
 
-      <ul>
-        {tasks.map((item) => (
-          <li key={item.id}>
-            <span>{item.text}</span>
-            <div>
-              <button onClick={() => handleEdit(item.id)}>Edit</button>
-              <button onClick={() => handleDelete(item.id)}>Delete</button>
-            </div>
-          </li>
-        ))}
-      </ul>
-    </div>
+        <List>
+          {filteredTasks.map((t) => (
+            <Row key={t.id}>
+              <Left>
+                <Check
+                  type="checkbox"
+                  checked={t.done}
+                  onChange={() => toggleTask(t.id)}
+                />
+                <Task done={t.done}>{t.title}</Task>
+              </Left>
+
+              <ButtonGroup>
+                <EditBtn type="button" onClick={() => handleEdit(t.id)}>
+                  Edit
+                </EditBtn>
+                <DelBtn type="button" onClick={() => handleDelete(t.id)}>
+                  Delete
+                </DelBtn>
+              </ButtonGroup>
+            </Row>
+          ))}
+
+          {filteredTasks.length === 0 && <Empty>No matching tasks found.</Empty>}
+        </List>
+
+        <Footer>
+          <ClearBtn type="button" onClick={clearCompleted}>
+            Clear Completed
+          </ClearBtn>
+        </Footer>
+      </Card>
+    </Page>
   );
 }
+
+const Page = styled.div`
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: #f6f7fb;
+  font-family: Arial, sans-serif;
+`;
+
+const Card = styled.div`
+  width: min(560px, 100%);
+  background: white;
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+`;
+
+const Title = styled.h1`
+  margin: 0;
+  font-size: 26px;
+`;
+
+const Small = styled.p`
+  margin: 8px 0 14px;
+  opacity: 0.75;
+`;
+
+const Form = styled.form`
+  display: flex;
+  gap: 10px;
+`;
+
+const Input = styled.input`
+  flex: 1;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  outline: none;
+`;
+
+const SearchInput = styled.input`
+  width: 100%;
+  padding: 12px;
+  margin-top: 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  outline: none;
+`;
+
+const AddBtn = styled.button`
+  padding: 12px 14px;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  font-weight: 700;
+  background: #2d6cdf;
+  color: white;
+`;
+
+const List = styled.div`
+  margin-top: 14px;
+  display: grid;
+  gap: 10px;
+`;
+
+const Row = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #f7f7fb;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 12px;
+  padding: 12px;
+`;
+
+const Left = styled.label`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+`;
+
+const Check = styled.input``;
+
+const Task = styled.span`
+  font-weight: 700;
+  text-decoration: ${(p) => (p.done ? "line-through" : "none")};
+  opacity: ${(p) => (p.done ? 0.6 : 1)};
+`;
+
+const ButtonGroup = styled.div`
+  display: flex;
+  gap: 8px;
+`;
+
+const EditBtn = styled.button`
+  padding: 10px 12px;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 700;
+  background: #f4b400;
+  color: white;
+`;
+
+const DelBtn = styled.button`
+  padding: 10px 12px;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 700;
+  background: #ff3b30;
+  color: white;
+`;
+
+const Empty = styled.div`
+  text-align: center;
+  padding: 14px;
+  opacity: 0.7;
+`;
+
+const Footer = styled.div`
+  margin-top: 14px;
+`;
+
+const ClearBtn = styled.button`
+  padding: 10px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 700;
+  background: transparent;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+`;
